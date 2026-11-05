@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAT Cloud & Accounts Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .view-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        .view-compact { display: flex; flex-direction: column; gap: 0.4rem; }
+        .numpad-btn {
+            background-color: #1e293b;
+            color: #f8fafc;
+            font-size: 1.5rem;
+            font-weight: 600;
+            padding: 0.75rem 0;
+            border-radius: 1rem;
+            border: 1px solid #334155;
+            transition: all 0.15s ease;
+        }
+        .numpad-btn:active {
+            background-color: #4f46e5;
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-12 font-sans antialiased">
+
+    <!-- INITIAL SETUP MODAL (First Open: Master Password + Passkey) -->
+    <div id="setupModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div class="bg-brand-600/20 text-brand-400 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="text-center">
+                <h2 class="text-lg font-bold">Initial Security Setup</h2>
+                <p class="text-xs text-slate-400">Set up your Master Password and 4-Digit Passkey.</p>
+            </div>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">Master Password (Text & Number)</label>
+                    <input type="text" id="setupMasterPwd" placeholder="e.g. MySecret2026" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">4-Digit Passkey (Numeric)</label>
+                    <input type="password" id="setupPasskey" maxlength="4" placeholder="••••" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-center font-mono tracking-widest focus:ring-2 focus:ring-brand-500">
+                </div>
+            </div>
+            <button onclick="saveInitialSetup()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 rounded-xl font-semibold shadow-lg transition text-sm">Save & Continue</button>
+        </div>
+    </div>
+
+    <!-- STYLISH NUMERIC PASSKEY LOCK SCREEN -->
+    <div id="lockScreen" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-xs text-center shadow-2xl">
+            <div class="bg-brand-600/20 text-brand-400 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2 class="text-lg font-bold mb-1">Enter Passkey</h2>
+            <p class="text-xs text-slate-400 mb-4">Enter 4-digit PIN to unlock app</p>
+            
+            <div class="flex justify-center items-center space-x-3 mb-6">
+                <div id="dot0" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-transparent"></div>
+                <div id="dot1" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-transparent"></div>
+                <div id="dot2" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-transparent"></div>
+                <div id="dot3" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-transparent"></div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <button onclick="pressNum('1')" class="numpad-btn">1</button>
+                <button onclick="pressNum('2')" class="numpad-btn">2</button>
+                <button onclick="pressNum('3')" class="numpad-btn">3</button>
+                <button onclick="pressNum('4')" class="numpad-btn">4</button>
+                <button onclick="pressNum('5')" class="numpad-btn">5</button>
+                <button onclick="pressNum('6')" class="numpad-btn">6</button>
+                <button onclick="pressNum('7')" class="numpad-btn">7</button>
+                <button onclick="pressNum('8')" class="numpad-btn">8</button>
+                <button onclick="pressNum('9')" class="numpad-btn">9</button>
+                <button onclick="resetPasskeyViaMaster()" class="numpad-btn text-xs text-rose-400 flex items-center justify-center" title="Reset via Master"><i class="fa-solid fa-key"></i></button>
+                <button onclick="pressNum('0')" class="numpad-btn">0</button>
+                <button onclick="pressNum('DEL')" class="numpad-btn text-amber-400 flex items-center justify-center"><i class="fa-solid fa-backspace"></i></button>
+            </div>
+            
+            <button onclick="resetPasskeyViaMaster()" class="text-xs text-slate-400 hover:text-brand-400 underline">Forgot Passkey?</button>
+        </div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-600 p-2 rounded-xl text-white shadow-md">
+                        <i class="fa-solid fa-vault text-xl"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+                        TAT Manager
+                    </span>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button onclick="openSecurityModal()" title="Security Settings" class="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition">
+                        <i class="fa-solid fa-shield-dog text-lg"></i>
+                    </button>
+                    <button onclick="exportData()" title="Backup JSON" class="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition">
+                        <i class="fa-solid fa-download text-lg"></i>
+                    </button>
+                    <button onclick="triggerImport()" title="Restore JSON" class="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition">
+                        <i class="fa-solid fa-upload text-lg"></i>
+                    </button>
+                    <!-- Fixed File Input (No strict accept filter to prevent mobile grey-out) -->
+                    <input type="file" id="importFile" onchange="handleFileImport(event)" class="hidden">
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex space-x-4 border-t border-slate-700/50 pt-2">
+                <button id="tabBtnFiles" onclick="switchTab('files')" class="flex-1 py-2.5 px-4 text-center font-medium text-sm rounded-t-lg transition border-b-2 border-brand-500 text-brand-400 bg-slate-800/80">
+                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Cloud Files
+                </button>
+                <button id="tabBtnAccounts" onclick="switchTab('accounts')" class="flex-1 py-2.5 px-4 text-center font-medium text-sm rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                    <i class="fa-solid fa-key mr-2"></i>Account Vault
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+        <!-- Quick Stats Bar -->
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 text-center shadow-sm">
+                <span class="text-xs text-slate-400 block">Cloud Files</span>
+                <span id="statFiles" class="text-xl font-bold text-indigo-400">0</span>
+            </div>
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 text-center shadow-sm">
+                <span class="text-xs text-slate-400 block">Categories</span>
+                <span id="statCategories" class="text-xl font-bold text-emerald-400">0</span>
+            </div>
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 text-center shadow-sm">
+                <span class="text-xs text-slate-400 block">Vault Accounts</span>
+                <span id="statAccounts" class="text-xl font-bold text-amber-400">0</span>
+            </div>
+        </div>
+
+        <!-- TAB 1: CLOUD FILES ORGANIZER -->
+        <section id="sectionFiles" class="space-y-4">
+            
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="fileSearchInput" oninput="renderFiles()" placeholder="Search files, tags, notes..." class="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm">
+            </div>
+            
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+                    
+                    <div class="relative inline-block text-left flex-1">
+                        <button onclick="toggleMenu('filterChecklistMenu')" class="w-full bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl px-3 py-2 text-sm text-slate-300 flex items-center justify-between">
+                            <span><i class="fa-solid fa-filter mr-2 text-brand-400"></i>Filter Options</span>
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                        </button>
+                        
+                        <div id="filterChecklistMenu" class="hidden absolute left-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl z-30 p-4 max-h-96 overflow-y-auto space-y-3">
+                            <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+                                <span class="text-xs font-bold uppercase text-slate-300">Select Filters</span>
+                                <button onclick="resetChecklistFilter()" class="text-[11px] text-brand-400 hover:underline">Reset All</button>
+                            </div>
+
+                            <label class="flex items-center space-x-2 text-xs font-semibold text-brand-300 cursor-pointer">
+                                <input type="checkbox" id="chkAll" onchange="toggleAllCheckboxes(this)" checked class="rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500">
+                                <span>All Files</span>
+                            </label>
+
+                            <div class="space-y-1">
+                                <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Categories</span>
+                                <div id="checklistCategories" class="space-y-1 pl-1"></div>
+                            </div>
+
+                            <div class="space-y-1">
+                                <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Providers</span>
+                                <div id="checklistProviders" class="space-y-1 pl-1"></div>
+                            </div>
+
+                            <div class="space-y-1">
+                                <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Provider Emails</span>
+                                <div id="checklistEmails" class="space-y-1 pl-1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative inline-block text-left">
+                        <button onclick="toggleMenu('fileActionMenu')" class="p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-300 hover:text-white hover:bg-slate-700">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <div id="fileActionMenu" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-30 py-1 text-sm">
+                            <button onclick="setViewMode('grid')" class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center justify-between text-slate-300">
+                                <span><i class="fa-solid fa-grip mr-2"></i>Grid View</span>
+                                <i id="checkGrid" class="fa-solid fa-check text-brand-400 hidden"></i>
+                            </button>
+                            <button onclick="setViewMode('list')" class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center justify-between text-slate-300">
+                                <span><i class="fa-solid fa-table-list mr-2"></i>List View</span>
+                                <i id="checkList" class="fa-solid fa-check text-brand-400 hidden"></i>
+                            </button>
+                            <button onclick="setViewMode('compact')" class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center justify-between text-slate-300">
+                                <span><i class="fa-solid fa-bars-staggered mr-2"></i>Compact View</span>
+                                <i id="checkCompact" class="fa-solid fa-check text-brand-400 hidden"></i>
+                            </button>
+                            <button onclick="setViewMode('details')" class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center justify-between text-slate-300">
+                                <span><i class="fa-solid fa-table-cells mr-2"></i>Details View</span>
+                                <i id="checkDetails" class="fa-solid fa-check text-brand-400 hidden"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="openFileModal()" class="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition shadow-lg shadow-brand-600/30 flex items-center justify-center whitespace-nowrap">
+                    <i class="fa-solid fa-plus mr-1.5"></i>Add Files
+                </button>
+            </div>
+
+            <!-- Files Container -->
+            <div id="filesContainer" class="view-grid mt-4"></div>
+        </section>
+
+        <!-- TAB 2: ACCOUNT VAULT -->
+        <section id="sectionAccounts" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="accountSearchInput" oninput="renderAccounts()" placeholder="Search provider, email, notes..." class="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm">
+                </div>
+                
+                <button onclick="openAccountModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-lg shadow-amber-600/30 flex items-center justify-center">
+                    <i class="fa-solid fa-plus mr-1.5"></i>Add Account
+                </button>
+            </div>
+
+            <!-- Accounts Grid -->
+            <div id="accountsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+    </main>
+
+    <!-- SECURITY SETTINGS MODAL (Two Tabs: Change Passkey & Change Master Password) -->
+    <div id="securityModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                <h3 class="text-base font-bold text-brand-400"><i class="fa-solid fa-shield mr-2"></i>Security Settings</h3>
+                <button onclick="closeSecurityModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <!-- Sub Tabs -->
+            <div class="flex space-x-2 mb-4 bg-slate-900 p-1 rounded-xl">
+                <button id="secTab1Btn" onclick="switchSecTab(1)" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white transition">Change Passkey</button>
+                <button id="secTab2Btn" onclick="switchSecTab(2)" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Master Password</button>
+            </div>
+
+            <!-- Tab 1: Change Passkey -->
+            <div id="secTab1" class="space-y-3">
+                <p class="text-[11px] text-slate-400">Enter your Master Password to set a new numeric passkey.</p>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">Master Password</label>
+                    <input type="password" id="passkeyMasterVerify" placeholder="Master Password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">New 4-Digit Passkey</label>
+                    <input type="password" id="newPasskeyInput" maxlength="4" placeholder="4-Digit PIN" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-center font-mono tracking-widest focus:ring-2 focus:ring-brand-500">
+                </div>
+                <button onclick="confirmChangePasskey()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 rounded-xl text-xs font-semibold mt-2">Update Passkey</button>
+            </div>
+
+            <!-- Tab 2: Change Master Password -->
+            <div id="secTab2" class="space-y-3 hidden">
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">Old Master Password</label>
+                    <input type="password" id="oldMasterPwd" placeholder="Old Password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">New Master Password</label>
+                    <input type="password" id="newMasterPwd" placeholder="New Password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-400 mb-1">Confirm New Password</label>
+                    <input type="password" id="confirmMasterPwd" placeholder="Confirm Password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+                <button onclick="confirmChangeMasterPwd()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 rounded-xl text-xs font-semibold mt-2">Update Master Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORT MODE SELECTION MODAL -->
+    <div id="importModeModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
+            <div class="bg-indigo-600/20 text-indigo-400 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl">
+                <i class="fa-solid fa-file-arrow-down"></i>
+            </div>
+            <h3 class="text-lg font-bold mb-1 text-slate-100">Import Backup Data</h3>
+            <p class="text-xs text-slate-400 mb-5">How would you like to handle existing data?</p>
+            
+            <div class="space-y-2.5">
+                <button onclick="processImportData('replace')" class="w-full py-3 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 rounded-xl text-sm font-semibold transition">
+                    <i class="fa-solid fa-trash-can mr-2"></i>Delete Existing & Replace
+                </button>
+                <button onclick="processImportData('merge')" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition shadow-md">
+                    <i class="fa-solid fa-plus-circle mr-2"></i>Keep Existing & Merge New
+                </button>
+                <button onclick="closeImportModeModal()" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD/EDIT FILE -->
+    <div id="fileModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 id="fileModalTitle" class="text-lg font-bold">Add Cloud File Record</h3>
+                <button onclick="closeFileModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="fileForm" onsubmit="saveFile(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="fileId">
+                
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Title *</label>
+                    <input type="text" id="fileTitle" required placeholder="e.g. Project Backup Archive" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Category *</label>
+                        <select id="fileCategorySelect" onchange="handleDropdownCustom(this, 'fileCategoryCustom')" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                            <option value="Software Project">Software Project</option>
+                            <option value="Document">Document</option>
+                            <option value="Picture">Picture</option>
+                            <option value="Video">Video</option>
+                            <option value="CUSTOM">➕ Add New Category</option>
+                        </select>
+                        <input type="text" id="fileCategoryCustom" placeholder="Type new category" class="hidden w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cloud Provider *</label>
+                        <select id="fileCloudSelect" onchange="handleDropdownCustom(this, 'fileCloudCustom')" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                            <option value="Google Drive">Google Drive</option>
+                            <option value="Terabox">Terabox</option>
+                            <option value="Dropbox">Dropbox</option>
+                            <option value="MediaFire">MediaFire</option>
+                            <option value="Mega">Mega</option>
+                            <option value="CUSTOM">➕ Add New Provider</option>
+                        </select>
+                        <input type="text" id="fileCloudCustom" placeholder="Type new provider" class="hidden w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cloud Account Email/Name</label>
+                        <input type="text" id="fileCloudAcc" placeholder="personal@gmail.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Folder Path</label>
+                        <input type="text" id="filePath" placeholder="/Backup/2026/Projects" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Direct Share Link</label>
+                    <input type="url" id="fileLink" placeholder="https://drive.google.com/..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tags (Comma Separated)</label>
+                    <input type="text" id="fileTags" placeholder="python, flutter, source-code" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Notes</label>
+                    <textarea id="fileNote" rows="2" placeholder="Additional details..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-700">
+                    <button type="button" onclick="closeFileModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 rounded-xl text-sm font-semibold shadow-md">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD/EDIT ACCOUNT -->
+    <div id="accountModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 id="accountModalTitle" class="text-lg font-bold">Add Vault Account</h3>
+                <button onclick="closeAccountModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="accountForm" onsubmit="saveAccount(event)" class="p-6 space-y-4">
+                <input type="hidden" id="accId">
+                
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Provider / Platform *</label>
+                    <select id="accProviderSelect" onchange="handleDropdownCustom(this, 'accProviderCustom')" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                        <option value="Google">Google</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="GitHub">GitHub</option>
+                        <option value="Telegram">Telegram</option>
+                        <option value="Microsoft">Microsoft</option>
+                        <option value="OpenAI">OpenAI</option>
+                        <option value="CUSTOM">➕ Add New Provider</option>
+                    </select>
+                    <input type="text" id="accProviderCustom" placeholder="Type new provider" class="hidden w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Account Label / Name</label>
+                    <input type="text" id="accName" placeholder="Work Email, Personal FB" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Email / User ID *</label>
+                    <input type="text" id="accMail" required placeholder="username or email@domain.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Password *</label>
+                    <input type="text" id="accPassword" required placeholder="••••••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Note</label>
+                    <textarea id="accNote" rows="2" placeholder="Recovery keys, security info..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-700">
+                    <button type="button" onclick="closeAccountModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 rounded-xl text-sm font-semibold shadow-md">Save Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center space-x-2 text-sm">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">Action completed successfully!</span>
+    </div>
+
+    <!-- Javascript Logic -->
+    <script>
+        let files = JSON.parse(localStorage.getItem('tat_files')) || [];
+        let accounts = JSON.parse(localStorage.getItem('tat_accounts')) || [];
+        let viewMode = localStorage.getItem('tat_view_mode') || 'grid';
+        
+        let appMasterPwd = localStorage.getItem('tat_master_pwd') || '';
+        let appPasskey = localStorage.getItem('tat_passkey') || '';
+        let currentPinInput = "";
+        let pendingImportData = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            checkAuthFlow();
+            buildChecklistFilterUI();
+            renderFiles();
+            renderAccounts();
+            updateStats();
+            setViewMode(viewMode);
+        });
+
+        // AUTHENTICATION FLOW (SETUP vs LOCK)
+        function checkAuthFlow() {
+            if (!appMasterPwd || !appPasskey) {
+                document.getElementById('setupModal').classList.remove('hidden');
+            } else {
+                document.getElementById('lockScreen').classList.remove('hidden');
+                updatePinDots();
+            }
+        }
+
+        function saveInitialSetup() {
+            const mPwd = document.getElementById('setupMasterPwd').value.trim();
+            const pKey = document.getElementById('setupPasskey').value.trim();
+
+            if (!mPwd || mPwd.length < 3) {
+                alert('Please enter a valid Master Password!');
+                return;
+            }
+            if (!pKey || pKey.length !== 4 || isNaN(pKey)) {
+                alert('Passkey must be exactly 4 digits!');
+                return;
+            }
+
+            localStorage.setItem('tat_master_pwd', mPwd);
+            localStorage.setItem('tat_passkey', pKey);
+            appMasterPwd = mPwd;
+            appPasskey = pKey;
+
+            document.getElementById('setupModal').classList.add('hidden');
+            showToast('Initial security configured!');
+        }
+
+        function pressNum(num) {
+            if (num === 'DEL') {
+                currentPinInput = currentPinInput.slice(0, -1);
+            } else if (currentPinInput.length < 4) {
+                currentPinInput += num;
+            }
+
+            updatePinDots();
+
+            if (currentPinInput.length === 4) {
+                setTimeout(() => {
+                    if (currentPinInput === appPasskey) {
+                        document.getElementById('lockScreen').classList.add('hidden');
+                        currentPinInput = "";
+                        updatePinDots();
+                    } else {
+                        alert('Incorrect Passkey!');
+                        currentPinInput = "";
+                        updatePinDots();
+                    }
+                }, 150);
+            }
+        }
+
+        function updatePinDots() {
+            for (let i = 0; i < 4; i++) {
+                const dot = document.getElementById(`dot${i}`);
+                if (i < currentPinInput.length) {
+                    dot.className = "w-4 h-4 rounded-full bg-brand-500 border-2 border-brand-400 shadow-md shadow-brand-500/50";
+                } else {
+                    dot.className = "w-4 h-4 rounded-full border-2 border-slate-600 bg-transparent";
+                }
+            }
+        }
+
+        function resetPasskeyViaMaster() {
+            const mInput = prompt("Enter Master Password to reset Passkey:");
+            if (mInput === null) return;
+            if (mInput === appMasterPwd) {
+                const newPin = prompt("Enter new 4-digit Passkey:");
+                if (newPin && newPin.length === 4 && !isNaN(newPin)) {
+                    localStorage.setItem('tat_passkey', newPin);
+                    appPasskey = newPin;
+                    document.getElementById('lockScreen').classList.add('hidden');
+                    currentPinInput = "";
+                    showToast('Passkey reset successfully!');
+                } else {
+                    alert('Invalid 4-digit Passkey!');
+                }
+            } else {
+                alert('Incorrect Master Password!');
+            }
+        }
+
+        // SECURITY SETTINGS MODAL TABS
+        function openSecurityModal() {
+            document.getElementById('passkeyMasterVerify').value = '';
+            document.getElementById('newPasskeyInput').value = '';
+            document.getElementById('oldMasterPwd').value = '';
+            document.getElementById('newMasterPwd').value = '';
+            document.getElementById('confirmMasterPwd').value = '';
+            switchSecTab(1);
+            document.getElementById('securityModal').classList.remove('hidden');
+        }
+
+        function closeSecurityModal() {
+            document.getElementById('securityModal').classList.add('hidden');
+        }
+
+        function switchSecTab(tabNum) {
+            const btn1 = document.getElementById('secTab1Btn');
+            const btn2 = document.getElementById('secTab2Btn');
+            const tab1 = document.getElementById('secTab1');
+            const tab2 = document.getElementById('secTab2');
+
+            if (tabNum === 1) {
+                btn1.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white transition";
+                btn2.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+                tab1.classList.remove('hidden');
+                tab2.classList.add('hidden');
+            } else {
+                btn2.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white transition";
+                btn1.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+                tab2.classList.remove('hidden');
+                tab1.classList.add('hidden');
+            }
+        }
+
+        function confirmChangePasskey() {
+            const mPwd = document.getElementById('passkeyMasterVerify').value;
+            const newPin = document.getElementById('newPasskeyInput').value;
+
+            if (mPwd !== appMasterPwd) {
+                alert("Incorrect Master Password!");
+                return;
+            }
+            if (!newPin || newPin.length !== 4 || isNaN(newPin)) {
+                alert("New passkey must be exactly 4 digits!");
+                return;
+            }
+
+            localStorage.setItem('tat_passkey', newPin);
+            appPasskey = newPin;
+            closeSecurityModal();
+            showToast("Passkey updated successfully!");
+        }
+
+        function confirmChangeMasterPwd() {
+            const oldPwd = document.getElementById('oldMasterPwd').value;
+            const newPwd = document.getElementById('newMasterPwd').value;
+            const confirmPwd = document.getElementById('confirmMasterPwd').value;
+
+            if (oldPwd !== appMasterPwd) {
+                alert("Incorrect Old Master Password!");
+                return;
+            }
+            if (!newPwd || newPwd.length < 3) {
+                alert("New Master Password is too short!");
+                return;
+            }
+            if (newPwd !== confirmPwd) {
+                alert("New passwords do not match!");
+                return;
+            }
+
+            localStorage.setItem('tat_master_pwd', newPwd);
+            appMasterPwd = newPwd;
+            closeSecurityModal();
+            showToast("Master Password updated successfully!");
+        }
+
+        // IMPORT / EXPORT LOGIC WITH FILE SYSTEM FIX
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ files, accounts }, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `TAT_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('Backup JSON downloaded!');
+        }
+
+        function triggerImport() {
+            document.getElementById('importFile').value = '';
+            document.getElementById('importFile').click();
+        }
+
+        function handleFileImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    pendingImportData = parsed;
+                    document.getElementById('importModeModal').classList.remove('hidden');
+                } catch (err) {
+                    alert('Invalid JSON File format!');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function closeImportModeModal() {
+            document.getElementById('importModeModal').classList.add('hidden');
+            pendingImportData = null;
+        }
+
+        function processImportData(mode) {
+            if (!pendingImportData) return;
+
+            if (mode === 'replace') {
+                files = pendingImportData.files || [];
+                accounts = pendingImportData.accounts || [];
+            } else if (mode === 'merge') {
+                const existingFileIds = new Set(files.map(f => f.id));
+                const existingAccIds = new Set(accounts.map(a => a.id));
+
+                if (pendingImportData.files) {
+                    pendingImportData.files.forEach(f => {
+                        if (!existingFileIds.has(f.id)) files.unshift(f);
+                    });
+                }
+                if (pendingImportData.accounts) {
+                    pendingImportData.accounts.forEach(a => {
+                        if (!existingAccIds.has(a.id)) accounts.unshift(a);
+                    });
+                }
+            }
+
+            localStorage.setItem('tat_files', JSON.stringify(files));
+            localStorage.setItem('tat_accounts', JSON.stringify(accounts));
+
+            closeImportModeModal();
+            buildChecklistFilterUI();
+            renderFiles();
+            renderAccounts();
+            updateStats();
+            showToast('Data imported successfully!');
+        }
+
+        function handleDropdownCustom(selectEl, customInputId) {
+            const customInput = document.getElementById(customInputId);
+            if (selectEl.value === 'CUSTOM') {
+                customInput.classList.remove('hidden');
+                customInput.required = true;
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+                customInput.required = false;
+            }
+        }
+
+        function buildChecklistFilterUI() {
+            const categories = [...new Set(files.map(f => f.category))];
+            const providers = [...new Set(files.map(f => f.cloud))];
+            const emails = [...new Set(files.map(f => f.cloud_acc).filter(Boolean))];
+
+            document.getElementById('checklistCategories').innerHTML = categories.map(c => `
+                <label class="flex items-center space-x-2 text-xs text-slate-300 hover:text-white cursor-pointer">
+                    <input type="checkbox" value="${c}" data-filter-type="category" onchange="onFilterCheckChange()" checked class="chk-item rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500">
+                    <span>${c}</span>
+                </label>
+            `).join('');
+
+            document.getElementById('checklistProviders').innerHTML = providers.map(p => `
+                <label class="flex items-center space-x-2 text-xs text-slate-300 hover:text-white cursor-pointer">
+                    <input type="checkbox" value="${p}" data-filter-type="provider" onchange="onFilterCheckChange()" checked class="chk-item rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500">
+                    <span>${p}</span>
+                </label>
+            `).join('');
+
+            document.getElementById('checklistEmails').innerHTML = emails.map(e => `
+                <label class="flex items-center space-x-2 text-xs text-slate-300 hover:text-white cursor-pointer">
+                    <input type="checkbox" value="${e}" data-filter-type="email" onchange="onFilterCheckChange()" checked class="chk-item rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500">
+                    <span>${e}</span>
+                </label>
+            `).join('');
+        }
+
+        function toggleAllCheckboxes(masterChk) {
+            document.querySelectorAll('.chk-item').forEach(chk => chk.checked = masterChk.checked);
+            renderFiles();
+        }
+
+        function onFilterCheckChange() {
+            const allItems = document.querySelectorAll('.chk-item');
+            const checkedItems = document.querySelectorAll('.chk-item:checked');
+            document.getElementById('chkAll').checked = (allItems.length === checkedItems.length);
+            renderFiles();
+        }
+
+        function resetChecklistFilter() {
+            document.getElementById('chkAll').checked = true;
+            toggleAllCheckboxes(document.getElementById('chkAll'));
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            localStorage.setItem('tat_view_mode', mode);
+            const container = document.getElementById('filesContainer');
+            
+            ['checkGrid', 'checkList', 'checkCompact', 'checkDetails'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            
+            if (mode === 'list' || mode === 'details') {
+                container.className = 'w-full overflow-x-auto';
+                document.getElementById(mode === 'list' ? 'checkList' : 'checkDetails').classList.remove('hidden');
+            } else if (mode === 'compact') {
+                container.className = 'view-compact';
+                document.getElementById('checkCompact').classList.remove('hidden');
+            } else {
+                container.className = 'view-grid';
+                document.getElementById('checkGrid').classList.remove('hidden');
+            }
+            toggleMenu('fileActionMenu', true);
+            renderFiles();
+        }
+
+        function toggleMenu(menuId, forceClose = false) {
+            const menu = document.getElementById(menuId);
+            if (forceClose) menu.classList.add('hidden');
+            else menu.classList.toggle('hidden');
+        }
+
+        function switchTab(tab) {
+            const secFiles = document.getElementById('sectionFiles');
+            const secAcc = document.getElementById('sectionAccounts');
+            const btnFiles = document.getElementById('tabBtnFiles');
+            const btnAcc = document.getElementById('tabBtnAccounts');
+
+            if (tab === 'files') {
+                secFiles.classList.remove('hidden');
+                secAcc.classList.add('hidden');
+                btnFiles.className = "flex-1 py-2.5 px-4 text-center font-medium text-sm rounded-t-lg transition border-b-2 border-brand-500 text-brand-400 bg-slate-800/80";
+                btnAcc.className = "flex-1 py-2.5 px-4 text-center font-medium text-sm rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200";
+            } else {
+                secFiles.classList.add('hidden');
+                secAcc.classList.remove('hidden');
+                btnAcc.className = "flex-1 py-2.5 px-4 text-center font-medium text-sm rounded-t-lg transition border-b-2 border-amber-500 text-amber-400 bg-slate-800/80";
+                btnFiles.className = "flex-1 py-2.5 px-4 text-center font-medium text-sm rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200";
+            }
+        }
+
+        function renderFiles() {
+            const container = document.getElementById('filesContainer');
+            const search = document.getElementById('fileSearchInput').value.toLowerCase();
+            
+            const checkedCategories = Array.from(document.querySelectorAll('input[data-filter-type="category"]:checked')).map(c => c.value);
+            const checkedProviders = Array.from(document.querySelectorAll('input[data-filter-type="provider"]:checked')).map(p => p.value);
+            const checkedEmails = Array.from(document.querySelectorAll('input[data-filter-type="email"]:checked')).map(e => e.value);
+
+            const filtered = files.filter(f => {
+                const matchesSearch = f.title.toLowerCase().includes(search) || 
+                                     (f.tags && f.tags.toLowerCase().includes(search)) ||
+                                     (f.note && f.note.toLowerCase().includes(search)) ||
+                                     f.cloud.toLowerCase().includes(search);
+                
+                const matchCat = checkedCategories.length === 0 || checkedCategories.includes(f.category);
+                const matchProv = checkedProviders.length === 0 || checkedProviders.includes(f.cloud);
+                const matchEmail = checkedEmails.length === 0 || !f.cloud_acc || checkedEmails.includes(f.cloud_acc);
+
+                return matchesSearch && matchCat && matchProv && matchEmail;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="w-full text-center py-12 text-slate-500"><i class="fa-solid fa-folder-open text-4xl mb-3 block"></i>No files match your selection</div>`;
+                return;
+            }
+
+            if (viewMode === 'list') {
+                container.innerHTML = `
+                <table class="w-full text-left text-xs text-slate-300 border-collapse bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/70">
+                    <thead class="bg-slate-900/80 uppercase text-[10px] text-slate-400 border-b border-slate-700">
+                        <tr>
+                            <th class="p-3">Title</th>
+                            <th class="p-3">Category</th>
+                            <th class="p-3">Provider</th>
+                            <th class="p-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50">
+                        ${filtered.map(f => `
+                            <tr class="hover:bg-slate-700/30 transition">
+                                <td class="p-3 font-semibold text-white">${f.title}</td>
+                                <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-900 text-slate-300">${f.category}</span></td>
+                                <td class="p-3 text-brand-400 font-medium">${f.cloud}</td>
+                                <td class="p-3 text-right space-x-1">
+                                    ${f.direct_link ? `<button onclick="copyText('${f.direct_link}')" title="Copy Link" class="p-1 text-slate-400 hover:text-brand-400"><i class="fa-regular fa-copy"></i></button>` : ''}
+                                    <button onclick="editFile('${f.id}')" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteFile('${f.id}')" class="p-1 text-slate-400 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`;
+                return;
+            }
+
+            if (viewMode === 'details') {
+                container.innerHTML = `
+                <table class="w-full text-left text-xs text-slate-300 border-collapse bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/70">
+                    <thead class="bg-slate-900/80 uppercase text-[10px] text-slate-400 border-b border-slate-700">
+                        <tr>
+                            <th class="p-3">Title</th>
+                            <th class="p-3">Category</th>
+                            <th class="p-3">Provider</th>
+                            <th class="p-3">Account Email</th>
+                            <th class="p-3">Folder Path</th>
+                            <th class="p-3">Tags</th>
+                            <th class="p-3">Notes</th>
+                            <th class="p-3 text-center">Link</th>
+                            <th class="p-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50">
+                        ${filtered.map(f => `
+                            <tr class="hover:bg-slate-700/30 transition">
+                                <td class="p-3 font-semibold text-white">${f.title}</td>
+                                <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-900 text-slate-300">${f.category}</span></td>
+                                <td class="p-3 text-brand-400 font-medium">${f.cloud}</td>
+                                <td class="p-3 text-slate-400">${f.cloud_acc || '-'}</td>
+                                <td class="p-3 font-mono text-slate-400">${f.folder_path || '/'}</td>
+                                <td class="p-3">${f.tags ? f.tags.split(',').map(t => `<span class="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded mr-1">#${t.trim()}</span>`).join('') : '-'}</td>
+                                <td class="p-3 italic text-slate-400">${f.note || '-'}</td>
+                                <td class="p-3 text-center">
+                                    ${f.direct_link ? `
+                                        <div class="flex items-center justify-center space-x-1.5">
+                                            <a href="${f.direct_link}" target="_blank" class="text-brand-400 hover:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                                            <button onclick="copyText('${f.direct_link}')" title="Copy Link" class="text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+                                        </div>
+                                    ` : '-'}
+                                </td>
+                                <td class="p-3 text-right space-x-1">
+                                    <button onclick="editFile('${f.id}')" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteFile('${f.id}')" class="p-1 text-slate-400 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`;
+                return;
+            }
+
+            if (viewMode === 'compact') {
+                container.innerHTML = filtered.map(f => `
+                    <div class="bg-slate-800 border border-slate-700/60 rounded-xl px-3 py-2 flex items-center justify-between shadow-sm">
+                        <div class="flex items-center space-x-3 overflow-hidden">
+                            <span class="text-xs px-2 py-0.5 rounded border bg-slate-900 text-brand-400 border-brand-500/20 shrink-0">${f.cloud}</span>
+                            <span class="font-bold text-sm text-slate-100 truncate">${f.title}</span>
+                            <span class="text-xs text-slate-400 shrink-0">(${f.category})</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5 shrink-0">
+                            ${f.direct_link ? `
+                                <a href="${f.direct_link}" target="_blank" class="p-1 text-brand-400 text-xs"><i class="fa-solid fa-link"></i></a>
+                                <button onclick="copyText('${f.direct_link}')" title="Copy Link" class="p-1 text-slate-400 hover:text-white text-xs"><i class="fa-regular fa-copy"></i></button>
+                            ` : ''}
+                            <button onclick="editFile('${f.id}')" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="deleteFile('${f.id}')" class="p-1 text-slate-400 hover:text-rose-400"><i class="fa-solid fa-trash text-xs"></i></button>
+                        </div>
+                    </div>`).join('');
+                return;
+            }
+
+            container.innerHTML = filtered.map(f => `
+                <div class="bg-slate-800 border border-slate-700/70 hover:border-slate-600 rounded-2xl p-4 flex flex-col justify-between shadow-sm transition">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="px-2.5 py-1 text-xs rounded-lg border font-medium bg-slate-900 text-brand-400 border-brand-500/20">${f.cloud}</span>
+                            <span class="text-xs text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded-md">${f.category}</span>
+                        </div>
+                        <h4 class="font-bold text-base text-slate-100 mb-1 leading-snug">${f.title}</h4>
+                        ${f.cloud_acc ? `<p class="text-xs text-slate-400 mb-1"><i class="fa-regular fa-user mr-1"></i>${f.cloud_acc}</p>` : ''}
+                        ${f.folder_path ? `<p class="text-xs font-mono text-slate-400 bg-slate-900/40 p-1.5 rounded-lg mb-3 break-all"><i class="fa-regular fa-folder-open mr-1"></i>${f.folder_path}</p>` : ''}
+                        ${f.note ? `<p class="text-xs text-slate-300 italic mb-3">${f.note}</p>` : ''}
+                    </div>
+
+                    <div>
+                        ${f.tags ? `<div class="flex flex-wrap gap-1 mb-3">${f.tags.split(',').map(t => `<span class="text-[10px] bg-slate-700/50 text-slate-300 px-2 py-0.5 rounded-md">#${t.trim()}</span>`).join('')}</div>` : ''}
+                        <div class="flex justify-between items-center pt-3 border-t border-slate-700/50 text-xs">
+                            ${f.direct_link ? `
+                                <div class="flex items-center space-x-2">
+                                    <a href="${f.direct_link}" target="_blank" class="text-brand-400 hover:underline flex items-center"><i class="fa-solid fa-link mr-1"></i> Open</a>
+                                    <button onclick="copyText('${f.direct_link}')" class="text-slate-400 hover:text-white flex items-center"><i class="fa-regular fa-copy mr-1"></i> Copy Link</button>
+                                </div>
+                            ` : '<span></span>'}
+                            <div class="space-x-1">
+                                <button onclick="editFile('${f.id}')" class="p-1.5 text-slate-400 hover:text-white"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteFile('${f.id}')" class="p-1.5 text-slate-400 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function openFileModal() {
+            document.getElementById('fileForm').reset();
+            document.getElementById('fileId').value = '';
+            document.getElementById('fileModalTitle').innerText = 'Add Cloud File Record';
+            document.getElementById('fileCategoryCustom').classList.add('hidden');
+            document.getElementById('fileCloudCustom').classList.add('hidden');
+            document.getElementById('fileModal').classList.remove('hidden');
+        }
+
+        function closeFileModal() { document.getElementById('fileModal').classList.add('hidden'); }
+
+        function saveFile(e) {
+            e.preventDefault();
+            const id = document.getElementById('fileId').value || 'file_' + Date.now();
+            
+            let category = document.getElementById('fileCategorySelect').value;
+            if (category === 'CUSTOM') category = document.getElementById('fileCategoryCustom').value;
+
+            let cloud = document.getElementById('fileCloudSelect').value;
+            if (cloud === 'CUSTOM') cloud = document.getElementById('fileCloudCustom').value;
+
+            const fileObj = {
+                id,
+                title: document.getElementById('fileTitle').value,
+                category,
+                cloud,
+                cloud_acc: document.getElementById('fileCloudAcc').value,
+                folder_path: document.getElementById('filePath').value,
+                direct_link: document.getElementById('fileLink').value,
+                tags: document.getElementById('fileTags').value,
+                note: document.getElementById('fileNote').value,
+                updated_at: new Date().toISOString()
+            };
+
+            const idx = files.findIndex(f => f.id === id);
+            if (idx > -1) files[idx] = fileObj;
+            else files.unshift(fileObj);
+
+            localStorage.setItem('tat_files', JSON.stringify(files));
+            closeFileModal();
+            buildChecklistFilterUI();
+            renderFiles();
+            updateStats();
+            showToast('Cloud file record saved!');
+        }
+
+        function editFile(id) {
+            const f = files.find(item => item.id === id);
+            if (!f) return;
+            openFileModal();
+            document.getElementById('fileModalTitle').innerText = 'Edit Cloud File Record';
+            document.getElementById('fileId').value = f.id;
+            document.getElementById('fileTitle').value = f.title;
+            document.getElementById('fileCategorySelect').value = f.category;
+            document.getElementById('fileCloudSelect').value = f.cloud;
+            document.getElementById('fileCloudAcc').value = f.cloud_acc || '';
+            document.getElementById('filePath').value = f.folder_path || '';
+            document.getElementById('fileLink').value = f.direct_link || '';
+            document.getElementById('fileTags').value = f.tags || '';
+            document.getElementById('fileNote').value = f.note || '';
+        }
+
+        function deleteFile(id) {
+            if (confirm("Are you sure you want to delete this record?")) {
+                files = files.filter(f => f.id !== id);
+                localStorage.setItem('tat_files', JSON.stringify(files));
+                buildChecklistFilterUI();
+                renderFiles();
+                updateStats();
+                showToast('Record deleted.');
+            }
+        }
+
+        // ACCOUNT VAULT ACTIONS
+        function renderAccounts() {
+            const container = document.getElementById('accountsContainer');
+            const search = document.getElementById('accountSearchInput').value.toLowerCase();
+
+            const filtered = accounts.filter(a => 
+                a.provider.toLowerCase().includes(search) || 
+                a.mail.toLowerCase().includes(search) || 
+                (a.name && a.name.toLowerCase().includes(search))
+            );
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500"><i class="fa-solid fa-shield-halved text-4xl mb-3 block"></i>No accounts saved in vault</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(a => `
+                <div class="bg-slate-800 border border-slate-700/70 hover:border-slate-600 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">${a.provider}</span>
+                            <span class="text-xs text-slate-400">${a.name || ''}</span>
+                        </div>
+                        <div class="space-y-1.5 my-3">
+                            <div class="flex items-center justify-between bg-slate-900/60 px-3 py-1.5 rounded-lg text-xs">
+                                <span class="text-slate-300 font-mono select-all">${a.mail}</span>
+                                <button onclick="copyText('${a.mail}')" class="text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                            <div class="flex items-center justify-between bg-slate-900/60 px-3 py-1.5 rounded-lg text-xs">
+                                <span id="pwd_${a.id}" class="text-slate-300 font-mono">••••••••</span>
+                                <div class="space-x-1.5">
+                                    <button onclick="togglePassword('${a.id}', '${a.password}')" class="text-slate-400 hover:text-white"><i class="fa-regular fa-eye"></i></button>
+                                    <button onclick="copyText('${a.password}')" class="text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        ${a.note ? `<p class="text-xs text-slate-400 italic">${a.note}</p>` : ''}
+                    </div>
+                    <div class="flex justify-end space-x-2 pt-3 border-t border-slate-700/50 text-xs">
+                        <button onclick="editAccount('${a.id}')" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteAccount('${a.id}')" class="p-1 text-slate-400 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openAccountModal() {
+            document.getElementById('accountForm').reset();
+            document.getElementById('accId').value = '';
+            document.getElementById('accountModalTitle').innerText = 'Add Vault Account';
+            document.getElementById('accProviderCustom').classList.add('hidden');
+            document.getElementById('accountModal').classList.remove('hidden');
+        }
+
+        function closeAccountModal() { document.getElementById('accountModal').classList.add('hidden'); }
+
+        function saveAccount(e) {
+            e.preventDefault();
+            const id = document.getElementById('accId').value || 'acc_' + Date.now();
+            
+            let provider = document.getElementById('accProviderSelect').value;
+            if (provider === 'CUSTOM') provider = document.getElementById('accProviderCustom').value;
+
+            const accObj = {
+                id,
+                provider,
+                name: document.getElementById('accName').value,
+                mail: document.getElementById('accMail').value,
+                password: document.getElementById('accPassword').value,
+                note: document.getElementById('accNote').value
+            };
+
+            const idx = accounts.findIndex(a => a.id === id);
+            if (idx > -1) accounts[idx] = accObj;
+            else accounts.unshift(accObj);
+
+            localStorage.setItem('tat_accounts', JSON.stringify(accounts));
+            closeAccountModal();
+            renderAccounts();
+            updateStats();
+            showToast('Account added to Vault!');
+        }
+
+        function editAccount(id) {
+            const a = accounts.find(item => item.id === id);
+            if (!a) return;
+            openAccountModal();
+            document.getElementById('accountModalTitle').innerText = 'Edit Vault Account';
+            document.getElementById('accId').value = a.id;
+            document.getElementById('accProviderSelect').value = a.provider;
+            document.getElementById('accName').value = a.name || '';
+            document.getElementById('accMail').value = a.mail;
+            document.getElementById('accPassword').value = a.password;
+            document.getElementById('accNote').value = a.note || '';
+        }
+
+        function deleteAccount(id) {
+            if (confirm("Are you sure you want to delete this account?")) {
+                accounts = accounts.filter(a => a.id !== id);
+                localStorage.setItem('tat_accounts', JSON.stringify(accounts));
+                renderAccounts();
+                updateStats();
+                showToast('Account removed.');
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('statFiles').innerText = files.length;
+            const categories = [...new Set(files.map(f => f.category))];
+            document.getElementById('statCategories').innerText = categories.length;
+            document.getElementById('statAccounts').innerText = accounts.length;
+        }
+
+        function togglePassword(id, pwd) {
+            const el = document.getElementById(`pwd_${id}`);
+            if (el.innerText === '••••••••') el.innerText = pwd;
+            else el.innerText = '••••••••';
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text);
+            showToast('Copied to clipboard!');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
