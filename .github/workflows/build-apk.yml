@@ -5,68 +5,217 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # --------------------------------------------------
+      # 1. Checkout
+      # --------------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # --------------------------------------------------
+      # 2. Node.js
+      # --------------------------------------------------
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
+      # --------------------------------------------------
+      # 3. Java 17
+      # --------------------------------------------------
       - name: Set up Java JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Install Bubblewrap CLI
-        run: |
-          npm install -g @bubblewrap/cli
-          echo "Bubblewrap version:"
-          bubblewrap --version
-
-      - name: Check Bubblewrap Init Options
-        run: |
-          bubblewrap init --help
-
-      - name: Build Android Project & APK
+      # --------------------------------------------------
+      # 4. Verify Android SDK supplied by GitHub runner
+      # --------------------------------------------------
+      - name: Check Android SDK
         run: |
           set -e
 
-          echo "Java version:"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "JAVA_HOME=$JAVA_HOME"
+
           java -version
 
-          echo "JAVA_HOME:"
-          echo "$JAVA_HOME"
+          if [ -z "$ANDROID_SDK_ROOT" ]; then
+            echo "ANDROID_SDK_ROOT is not set."
+            exit 1
+          fi
 
-          echo "Initializing Bubblewrap project..."
+          if [ ! -d "$ANDROID_SDK_ROOT" ]; then
+            echo "Android SDK directory does not exist:"
+            echo "$ANDROID_SDK_ROOT"
+            exit 1
+          fi
 
-          bubblewrap init \
-            --manifest=https://tahidultech.github.io/tat-cloud-manager/manifest.json \
-            --directory=android-app
+          echo "Android SDK contents:"
+          ls -la "$ANDROID_SDK_ROOT"
 
-          echo "Bubblewrap project created."
+      # --------------------------------------------------
+      # 5. Install Bubblewrap
+      # --------------------------------------------------
+      - name: Install Bubblewrap CLI
+        run: |
+          set -e
 
-          cd android-app
+          npm install -g @bubblewrap/cli
 
-          echo "Building APK..."
+          echo "Bubblewrap installed."
+
+          npm list -g @bubblewrap/cli --depth=0
+
+      # --------------------------------------------------
+      # 6. Configure Bubblewrap BEFORE using any command
+      # --------------------------------------------------
+      - name: Configure Bubblewrap Environment
+        run: |
+          set -e
+
+          mkdir -p "$HOME/.bubblewrap"
+
+          cat > "$HOME/.bubblewrap/config.json" <<EOF
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "${ANDROID_SDK_ROOT}"
+          }
+          EOF
+
+          echo "Bubblewrap config:"
+          cat "$HOME/.bubblewrap/config.json"
+
+      # --------------------------------------------------
+      # 7. Verify Bubblewrap environment
+      # --------------------------------------------------
+      - name: Run Bubblewrap Doctor
+        run: |
+          set -e
+          bubblewrap doctor
+
+      # --------------------------------------------------
+      # 8. Prepare TWA project directory
+      # --------------------------------------------------
+      - name: Prepare TWA Project
+        run: |
+          set -e
+
+          rm -rf android-app
+          mkdir -p android-app
+
+          echo "TWA project directory created."
+
+      # --------------------------------------------------
+      # 9. Create TWA manifest
+      # --------------------------------------------------
+      - name: Create TWA Manifest
+        run: |
+          set -e
+
+          cat > android-app/twa-manifest.json <<'EOF'
+          {
+            "manifestVersion": "1",
+            "name": "TAT Cloud & Accounts Manager",
+            "shortName": "TAT Manager",
+            "applicationId": "com.tahidul.tatcloudmanager",
+            "hostName": "tahidultech.github.io",
+            "startUrl": "/tat-cloud-manager/",
+            "iconUrl": "https://tahidultech.github.io/tat-cloud-manager/icon/icon.png",
+            "maskableIconUrl": "https://tahidultech.github.io/tat-cloud-manager/icon/icon.png",
+            "displayMode": "standalone",
+            "themeColor": "#4f46e5",
+            "navigationColor": "#0f172a",
+            "navigationColorDark": "#0f172a",
+            "navigationDividerColor": "#0f172a",
+            "navigationDividerColorDark": "#0f172a",
+            "backgroundColor": "#0f172a",
+            "enableNotifications": true,
+            "splashScreenFadeOutDuration": 300,
+            "fallbackType": "customtabs",
+            "orientation": "default",
+            "minSdkVersion": 21,
+            "appVersionCode": 1,
+            "appVersion": "1.0.0",
+            "shortcuts": [],
+            "generatorApp": "Bubblewrap",
+            "enableSiteSettingsShortcut": true,
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "additionalTrustedOrigins": [],
+            "retainedBundles": 0,
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "android"
+            }
+          }
+          EOF
+
+          echo "TWA manifest:"
+          cat android-app/twa-manifest.json
+
+      # --------------------------------------------------
+      # 10. Generate Android project from TWA manifest
+      # --------------------------------------------------
+      - name: Generate Android Project
+        working-directory: android-app
+        run: |
+          set -e
+
+          bubblewrap update \
+            --manifest="twa-manifest.json" \
+            --skipVersionUpgrade
+
+      # --------------------------------------------------
+      # 11. Build APK
+      # --------------------------------------------------
+      - name: Build Signed APK
+        working-directory: android-app
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.BUBBLEWRAP_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.BUBBLEWRAP_KEY_PASSWORD }}
+        run: |
+          set -e
 
           bubblewrap build \
-            --skipValidation
+            --manifest="twa-manifest.json" \
+            --skipPwaValidation
 
-          echo "Generated APK files:"
+          echo "APK files:"
           find . -type f -name "*.apk" -print
 
-      - name: Upload Generated APK Artifact
+          echo "AAB files:"
+          find . -type f -name "*.aab" -print
+
+      # --------------------------------------------------
+      # 12. Upload APK
+      # --------------------------------------------------
+      - name: Upload Generated APK
         uses: actions/upload-artifact@v4
         with:
           name: TAT-Manager-Android-APK
           path: |
-            android-app/app/build/outputs/apk/release/*.apk
+            android-app/*.apk
             android-app/**/*.apk
           if-no-files-found: error
+
+      # --------------------------------------------------
+      # 13. Upload AAB too
+      # --------------------------------------------------
+      - name: Upload Generated AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: TAT-Manager-Android-AAB
+          path: |
+            android-app/*.aab
+            android-app/**/*.aab
+          if-no-files-found: warn
