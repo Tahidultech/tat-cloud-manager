@@ -1,0 +1,28 @@
+{
+  "packageId": "com.tahidultech.tatcloudmanager",
+  "host": "tahidultech.github.io",
+  "name": "TAT Cloud & Accounts Manager",
+  "launcherName": "TAT Manager",
+  "display": "standalone",
+  "themeColor": "#4f46e5",
+  "navigationColor": "#4f46e5",
+  "backgroundColor": "#0f172a",
+  "startUrl": "/tat-cloud-manager/",
+  "iconUrl": "https://tahidultech.github.io/tat-cloud-manager/icon/icon-512.png",
+  "maskableIconUrl": "https://tahidultech.github.io/tat-cloud-manager/icon/icon-512.png",
+  "webManifestUrl": "https://tahidultech.github.io/tat-cloud-manager/manifest.json",
+  "fullScopeUrl": "https://tahidultech.github.io/tat-cloud-manager/",
+  "splashScreenFadeOutDuration": 300,
+  "enableNotifications": false,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "fallbackType": "customtabs",
+  "features": {},
+  "minSdkVersion": 19,
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "signing": {
+    "storeFile": "./android.keystore",
+    "keyAlias": "android"
+  }
+}
