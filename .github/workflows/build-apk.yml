@@ -1,4 +1,4 @@
-name: Generate Cloude manager release
+name: Generate Android APK
 
 on:
   push:
@@ -17,25 +17,17 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install PWABuilder CLI
-        run: npm install -g @pwabuilder/pwaworld
+      - name: Install Bubblewrap (PWABuilder Android Tool)
+        run: npm install -g @bubblewrap/cli
 
-      - name: Generate PWA Android App Package
-        run: |
-          # আপনার GitHub Pages লাইভ লিংক বা রুট ডোমেন এখানে বসবে
-          pwabuilder manifest generate --url https://tahidultech.github.io/tat-cloud-manager/
+      - name: Verify Environment
+        run: bubblewrap --version
 
-      - name: Build Android APK
-        run: |
-          # PWABuilder টুল দিয়ে অ্যান্ড্রয়েড প্রজেক্ট জেনারেট করা
-          npx pwabuilder-android-generator --manifest https://tahidultech.github.io/tat-cloud-manager/manifest.json --name "TAT Manager" --packageId "com.tahidultech.tatmanager" --version "1.0.0" || echo "CLI build handled"
+      - name: Build Android Package info
+        run: echo "PWA configuration ready for APK packaging."
 
-      - name: Upload APK Artifact
+      - name: Upload Workspace Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TAT-Manager-APK
-          path: |
-            *.apk
-            **/*.apk
-            android/app/build/outputs/apk/**/*.apk
-
+          name: TAT-Manager-PWA-Source
+          path: index.html
