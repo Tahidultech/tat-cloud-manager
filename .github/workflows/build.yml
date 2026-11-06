@@ -36,16 +36,16 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Build APK
+      - name: Build APK from twa-manifest.json (no init)
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: "123456"
           BUBBLEWRAP_KEY_PASSWORD: "123456"
         run: |
           rm -rf ./twa
           mkdir -p ./twa
-          # auto accept all prompts with Enter
-          yes "" | npx bubblewrap init --manifest https://tahidultech.github.io/tat-cloud-manager/manifest.json --directory ./twa
+          cp ./twa-manifest.json ./twa/twa-manifest.json
           cd twa
+          npx bubblewrap update --skipVersionUpgrade
           npx bubblewrap build
 
       - name: Upload APK
