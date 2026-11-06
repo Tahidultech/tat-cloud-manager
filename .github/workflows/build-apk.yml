@@ -10,7 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-     - name: Build Android Project & APK
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Bubblewrap CLI
+        run: |
+          npm install -g @bubblewrap/cli
+          echo "Bubblewrap version:"
+          bubblewrap --version
+
+      - name: Check Bubblewrap Init Options
+        run: |
+          bubblewrap init --help
+
+      - name: Build Android Project & APK
         run: |
           set -e
 
@@ -24,8 +48,7 @@ jobs:
 
           bubblewrap init \
             --manifest=https://tahidultech.github.io/tat-cloud-manager/manifest.json \
-            --directory=android-app \
-            --javaHome="$JAVA_HOME"
+            --directory=android-app
 
           echo "Bubblewrap project created."
 
