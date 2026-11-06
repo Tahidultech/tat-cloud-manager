@@ -26,11 +26,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Create TWA Android Project
-        run: |
-          set -e
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-          rm -rf android-app
+      - name: Create Android Project
+        run: |
           mkdir -p android-app/app/src/main/java/com/tahidul/tatmanager
           mkdir -p android-app/app/src/main/res/values
 
@@ -95,6 +95,13 @@ GRADLE
 </resources>
 XML
 
+          cat > android-app/app/src/main/res/values/styles.xml <<'XML'
+<resources>
+    <style name="AppTheme"
+        parent="android:style/Theme.Material.Light.NoActionBar"/>
+</resources>
+XML
+
           cat > android-app/app/src/main/AndroidManifest.xml <<'XML'
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -103,9 +110,7 @@ XML
 
     <application
         android:theme="@style/AppTheme"
-        android:label="@string/app_name"
-        android:usesCleartextTraffic="false"
-        android:resizeableActivity="true">
+        android:label="@string/app_name">
 
         <activity
             android:name=".MainActivity"
@@ -122,15 +127,6 @@ XML
 </manifest>
 XML
 
-          cat > android-app/app/src/main/res/values/styles.xml <<'XML'
-<resources>
-    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#4f46e5</item>
-    </style>
-</resources>
-XML
-
           cat > android-app/app/src/main/java/com/tahidul/tatmanager/MainActivity.java <<'JAVA'
 package com.tahidul.tatmanager;
 
@@ -141,39 +137,29 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
 
-    private static final String URL =
-            "https://tahidultech.github.io/tat-cloud-manager/";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         WebView webView = new WebView(this);
-
         webView.setWebViewClient(new WebViewClient());
 
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
-        webView.getSettings().setDatabaseEnabled(true);
 
-        webView.loadUrl(URL);
+        webView.loadUrl(
+            "https://tahidultech.github.io/tat-cloud-manager/"
+        );
 
         setContentView(webView);
     }
 }
 JAVA
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Create Gradle Wrapper
-        working-directory: android-app
-        run: |
-          gradle wrapper --gradle-version 8.11.1
-
       - name: Build APK
         working-directory: android-app
         run: |
+          gradle wrapper --gradle-version 8.11.1
           chmod +x gradlew
           ./gradlew assembleRelease
 
