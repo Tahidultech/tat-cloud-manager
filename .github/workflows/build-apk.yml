@@ -1,4 +1,4 @@
-name: Generate Android APK
+name: Build PWA Android APK
 
 on:
   push:
@@ -17,17 +17,15 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install Bubblewrap (PWABuilder Android Tool)
-        run: npm install -g @bubblewrap/cli
+      - name: Build Android App Package (PWA Builder Action)
+        uses: pwa-builder/pwabuilder-action@main
+        with:
+          url: https://tahidultech.github.io/tat-cloud-manager/
+          outputFolder: android-output
+          platforms: android
 
-      - name: Verify Environment
-        run: bubblewrap --version
-
-      - name: Build Android Package info
-        run: echo "PWA configuration ready for APK packaging."
-
-      - name: Upload Workspace Artifact
+      - name: Upload Generated APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TAT-Manager-PWA-Source
-          path: index.html
+          name: TAT-Manager-Android-APK
+          path: android-output/**/*.apk
