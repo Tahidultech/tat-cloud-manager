@@ -17,20 +17,21 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
+      - name: Setup Android SDK - fix tools package bug
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: Install SDK components
         run: |
           yes | sdkmanager --licenses > /dev/null
-          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.1"
+          sdkmanager "platforms;android-33" "build-tools;33.0.1"
 
       - name: Configure Bubblewrap non-interactive
         run: |
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
           ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/bin" || true
-          cat ~/.bubblewrap/config.json
 
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
