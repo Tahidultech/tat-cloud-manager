@@ -1,4 +1,4 @@
-name: Build PWA Android APK
+name: Build Android APK with Bubblewrap
 
 on:
   push:
@@ -17,15 +17,27 @@ jobs:
         with:
           node-version: 18
 
-      - name: Build Android App Package (PWA Builder Action)
-        uses: pwa-builder/pwabuilder-action@main
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
         with:
-          url: https://tahidultech.github.io/tat-cloud-manager/
-          outputFolder: android-output
-          platforms: android
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Build Android Project & APK
+        run: |
+          # নন-ইন্টারঅ্যাক্টিভ মোডে প্রোজেক্ট জেনারেট ও বিল্ড করা
+          bubblewrap init --manifest=https://tahidultech.github.io/tat-cloud-manager/manifest.json --directory=android-app || true
+          cd android-app
+          bubblewrap build --skipValidation
 
       - name: Upload Generated APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: TAT-Manager-Android-APK
-          path: android-output/**/*.apk
+          path: |
+            android-app/app/build/outputs/apk/release/*.apk
+            android-app/**/*.apk
+
