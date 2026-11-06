@@ -1,11 +1,16 @@
 {
-  "name": "TAT Cloud Manager",
-  "short_name": "TAT Cloud",
-  "start_url": "/tat-cloud-manager/",
+  "name": "TAT Cloud & Accounts Manager",
+  "short_name": "TAT Manager",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
   "icons": [
+    {
+      "src": "icon/icon-512.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
     {
       "src": "icon/icon-512.png",
       "sizes": "512x512",
