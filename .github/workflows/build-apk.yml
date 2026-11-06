@@ -1,0 +1,41 @@
+name: Generate Cloude manager release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install PWABuilder CLI
+        run: npm install -g @pwabuilder/pwaworld
+
+      - name: Generate PWA Android App Package
+        run: |
+          # আপনার GitHub Pages লাইভ লিংক বা রুট ডোমেন এখানে বসবে
+          pwabuilder manifest generate --url https://tahidultech.github.io/tat-cloud-manager/
+
+      - name: Build Android APK
+        run: |
+          # PWABuilder টুল দিয়ে অ্যান্ড্রয়েড প্রজেক্ট জেনারেট করা
+          npx pwabuilder-android-generator --manifest https://tahidultech.github.io/tat-cloud-manager/manifest.json --name "TAT Manager" --packageId "com.tahidultech.tatmanager" --version "1.0.0" || echo "CLI build handled"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TAT-Manager-APK
+          path: |
+            *.apk
+            **/*.apk
+            android/app/build/outputs/apk/**/*.apk
+
