@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -24,14 +25,37 @@ jobs:
           java-version: '17'
 
       - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
+        run: |
+          npm install -g @bubblewrap/cli
+          bubblewrap --version
+          java -version
 
       - name: Build Android Project & APK
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
-          # নন-ইন্টারঅ্যাক্টিভ মোডে প্রোজেক্ট জেনারেট ও বিল্ড করা
-          bubblewrap init --manifest=https://tahidultech.github.io/tat-cloud-manager/manifest.json --directory=android-app || true
+          set -e
+
+          echo "Using Java:"
+          java -version
+
+          echo "Initializing Bubblewrap project..."
+
+          # Bubblewrap asks whether it should install its own JDK.
+          # Answer "n" because GitHub Actions already provides JDK 17.
+          printf "n\n" | bubblewrap init \
+            --manifest=https://tahidultech.github.io/tat-cloud-manager/manifest.json \
+            --directory=android-app
+
+          echo "Bubblewrap project created successfully."
+
           cd android-app
+
+          echo "Building APK..."
           bubblewrap build --skipValidation
+
+          echo "APK files:"
+          find . -type f -name "*.apk" -print
 
       - name: Upload Generated APK Artifact
         uses: actions/upload-artifact@v4
@@ -40,4 +64,4 @@ jobs:
           path: |
             android-app/app/build/outputs/apk/release/*.apk
             android-app/**/*.apk
-
+          if-no-files-found: error
