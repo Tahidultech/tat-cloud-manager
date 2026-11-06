@@ -17,7 +17,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK - fix tools package bug
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
@@ -27,7 +27,7 @@ jobs:
           yes | sdkmanager --licenses > /dev/null
           sdkmanager "platforms;android-33" "build-tools;33.0.1"
 
-      - name: Configure Bubblewrap non-interactive
+      - name: Configure Bubblewrap
         run: |
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
@@ -41,6 +41,8 @@ jobs:
           BUBBLEWRAP_KEYSTORE_PASSWORD: "123456"
           BUBBLEWRAP_KEY_PASSWORD: "123456"
         run: |
+          rm -rf ./twa
+          mkdir -p ./twa
           npx bubblewrap init --manifest https://tahidultech.github.io/tat-cloud-manager/manifest.json --directory ./twa
           cd twa
           npx bubblewrap build
