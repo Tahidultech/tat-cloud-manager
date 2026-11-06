@@ -26,11 +26,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
 
       - name: Create Android Project
         run: |
+          set -e
+
           mkdir -p android-app/app/src/main/java/com/tahidul/tatmanager
           mkdir -p android-app/app/src/main/res/values
 
@@ -83,10 +87,6 @@ android {
         versionName '1.0'
     }
 }
-
-dependencies {
-    implementation 'androidx.browser:browser:1.8.0'
-}
 GRADLE
 
           cat > android-app/app/src/main/res/values/strings.xml <<'XML'
@@ -97,15 +97,13 @@ XML
 
           cat > android-app/app/src/main/res/values/styles.xml <<'XML'
 <resources>
-    <style name="AppTheme"
-        parent="android:style/Theme.Material.Light.NoActionBar"/>
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar"/>
 </resources>
 XML
 
           cat > android-app/app/src/main/AndroidManifest.xml <<'XML'
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
@@ -115,14 +113,11 @@ XML
         <activity
             android:name=".MainActivity"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-
         </activity>
-
     </application>
 </manifest>
 XML
@@ -136,21 +131,16 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         WebView webView = new WebView(this);
         webView.setWebViewClient(new WebViewClient());
-
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
 
-        webView.loadUrl(
-            "https://tahidultech.github.io/tat-cloud-manager/"
-        );
-
+        webView.loadUrl("https://tahidultech.github.io/tat-cloud-manager/");
         setContentView(webView);
     }
 }
@@ -158,10 +148,7 @@ JAVA
 
       - name: Build APK
         working-directory: android-app
-        run: |
-          gradle wrapper --gradle-version 8.11.1
-          chmod +x gradlew
-          ./gradlew assembleRelease
+        run: gradle assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
